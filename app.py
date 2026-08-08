@@ -90,6 +90,12 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {
   color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
+/* Safety net: never let the page itself scroll horizontally */
+html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
+  overflow-x: hidden;
+}
+.stMainBlockContainer, [data-testid="stMainBlockContainer"] { max-width: 100%; }
+[data-testid="stColumn"], .db-row > div, .rec-block { min-width: 0; }
 html, body, .stApp, .stMarkdown, [data-testid="stSidebar"], [data-testid="stSidebarContent"] {
   font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
 }
@@ -97,7 +103,7 @@ html, body, .stApp, .stMarkdown, [data-testid="stSidebar"], [data-testid="stSide
 #MainMenu, footer, [data-testid="stToolbar"], [data-testid="stDecoration"], [data-testid="stStatusWidget"] {
   display: none;
 }
-[data-testid="stHeader"] { background: transparent; }
+[data-testid="stHeader"] { display: none; }
 .main .block-container { padding-top: 1.8rem; padding-bottom: 3rem; max-width: 1360px; }
 
 /* ---- typography ---- */
@@ -117,10 +123,41 @@ code {
   color: var(--text-2);
 }
 
-/* ---- sidebar ---- */
-[data-testid="stSidebar"] { background: var(--surface-2); border-right: 1px solid var(--border); }
-[data-testid="stSidebarContent"] { padding: 1.1rem 1rem 2rem; }
-[data-testid="stSidebar"] hr { margin: 1rem 0; }
+/* ---- filters panel (custom sidebar) ---- */
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:has(#lt-panel-mark) {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.05rem 0.9rem 1.35rem;
+  align-self: flex-start;
+  position: sticky;
+  top: 0.6rem;
+  max-height: calc(100vh - 1.2rem);
+  overflow-y: auto;
+}
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:has(#lt-panel-mark) hr { margin: 1rem 0; }
+
+/* ---- sidebar toggle button ---- */
+[data-testid="stBaseButton-primary"] {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--text-2) !important;
+  background: #fff !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: none !important;
+}
+[data-testid="stBaseButton-primary"]:hover {
+  background: var(--surface-2) !important;
+  border-color: var(--faint) !important;
+  color: var(--text) !important;
+}
 
 .side-brand {
   display: flex; align-items: center; gap: 8px;
@@ -306,10 +343,123 @@ details[data-testid="stExpander"][open] > summary { border-bottom: 1px solid var
 .log-table tr:last-child td { border-bottom: none; }
 .log-warns { font-size: 12.5px; color: var(--text-2); margin: 10px 0 0; padding-left: 18px; }
 .log-note { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
+
+.db-src { word-break: break-all; }
+
+/* =====================================================================
+   Responsive layout
+   ===================================================================== */
+
+/* ---- tablet ---- */
+@media (max-width: 1100px) {
+  .main .block-container { padding-left: 1.4rem; padding-right: 1.4rem; }
+  .kpi-row { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ---- mobile ---- */
+@media (max-width: 768px) {
+  .main .block-container { padding: 1rem 0.9rem 2.2rem; max-width: 100%; }
+  .main h1 { font-size: 20px; }
+  .main h2 { font-size: 15px; }
+  .main h3 { font-size: 14px; }
+  .kpi-row { grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 10px; }
+  .kpi-card { padding: 10px 12px; }
+  .kpi-value { font-size: 20px; }
+  .kpi-label { font-size: 12px; }
+  /* stack every st.columns block (lead detail, header row) on mobile */
+  [data-testid="stHorizontalBlock"] { flex-wrap: wrap; gap: 0.75rem !important; }
+  [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+    flex: 1 1 100% !important;
+    min-width: 0;
+  }
+
+  /* larger tap targets */
+  .stButton > button, [data-testid="stDownloadButton"] button { min-height: 38px; }
+  [data-testid="stFileUploader"] section { min-height: 44px; }
+  /* detail record: narrower label column, notes full width */
+  .field-k { flex: 0 0 92px; font-size: 12px; }
+  .rec-block { flex-wrap: wrap; gap: 10px; }
+  .score-big { font-size: 24px; }
+  .dbanner { padding: 10px 12px; }
+  /* long tables scroll inside their own container, never the page */
+  .stMarkdown table, .log-table { display: block; overflow-x: auto; }
+  [data-testid="stDataFrame"] .ag-cell, [data-testid="stDataFrame"] .ag-header-cell { font-size: 12px; }
+}
+
+/* ---- small mobile ---- */
+@media (max-width: 400px) {
+  .main .block-container { padding-left: 0.7rem; padding-right: 0.7rem; }
+  .kpi-value { font-size: 18px; }
+  .field-k { flex: 0 0 84px; }
+}
 """
 
 st.set_page_config(page_title="Lead Triage", layout="wide")
 st.markdown(f"<style>{CSS}</style>", unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------------------------
+# Sidebar toggle — custom panel, fully Streamlit-native
+#
+# The "sidebar" is a normal column in the main area (see render_filters_panel
+# below), so no Streamlit sidebar chrome is involved and there is nothing to
+# "collapse" in the native sense. The open/closed state lives in the URL
+# (?sb=open|closed), which survives refreshes and new sessions, and the toggle
+# is an ordinary st.button. No JavaScript, no DOM poking, no reloads.
+#
+# On mobile the panel becomes a fixed overlay drawer via injected CSS, and the
+# toggle floats to the top-right above it, so there is always a visible way to
+# open the panel and to close the drawer.
+#
+# On the very first mobile load there is no ?sb= state yet; a tiny hidden
+# same-origin iframe (rendered once, before any state exists) sets ?sb=closed
+# and reloads so the drawer does not auto-open on phones. It is a no-op on
+# desktop and whenever a state is already present.
+# ---------------------------------------------------------------------------
+MOBILE_INIT_IFRAME = (
+    "<iframe srcdoc=\"<script>try{var p=parent;if(p.innerWidth<769&&p.location.href.indexOf('sb=')<0){var u=new URL(p.location.href);u.searchParams.set('sb','closed');p.location.replace(u.href)}}catch(e){}</script>\" "
+    'style="width:0;height:0;border:0;position:absolute;visibility:hidden" '
+    'aria-hidden="true" tabindex="-1"></iframe>'
+)
+
+# Applied only while the panel is open. On mobile it turns the panel into an
+# overlay drawer and floats the toggle above it so both stay reachable.
+MOBILE_DRAWER_CSS = """
+@media (max-width: 768px) {
+  [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:has(#lt-panel-mark) {
+    position: fixed !important;
+    top: 0; left: 0;
+    width: min(88vw, 340px) !important;
+    height: 100dvh;
+    max-height: none !important;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 0;
+    z-index: 1000;
+    overflow-y: auto;
+    padding: 1rem 1rem 1.8rem;
+    box-shadow: 0 0 40px rgba(24, 24, 27, 0.18);
+  }
+  [data-testid="stBaseButton-primary"] {
+    position: fixed !important;
+    top: 10px; right: 10px;
+    z-index: 9999;
+  }
+}
+"""
+
+
+def sidebar_is_open() -> bool:
+    """The panel is open unless the URL says otherwise (?sb=closed)."""
+    return st.query_params.get("sb", "open") != "closed"
+
+
+def set_sidebar(open_: bool) -> None:
+    """Persist the panel state in the URL (survives refreshes + new sessions)."""
+    st.query_params["sb"] = "open" if open_ else "closed"
+    st.rerun()
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -501,9 +651,44 @@ if "source_name" not in st.session_state:
 
 
 # ---------------------------------------------------------------------------
-# Sidebar: upload + filters + exports
+# Filters panel (the app's custom "sidebar") — upload, filters, exports.
+# Functionality is unchanged from the former st.sidebar block; it is rendered
+# as a main-area column (or a drawer on mobile). All filter widgets carry
+# explicit keys so their state survives collapsing and reopening the panel.
 # ---------------------------------------------------------------------------
-with st.sidebar:
+def filter_bounds(base: pd.DataFrame) -> tuple[int, int]:
+    emp_max = max(50, int(base["employee_count"].dropna().max() // 50 * 50 + 50))
+    bud_max = max(20000, int(base["budget_monthly"].dropna().max() // 1000 * 1000 + 1000))
+    return emp_max, bud_max
+
+
+def apply_filters(
+    df: pd.DataFrame,
+    rec_sel, score_lo, score_hi, src_sel,
+    emp_lo, emp_hi, inc_emp_unknown,
+    b_lo, b_hi, inc_budget_unknown,
+) -> pd.DataFrame:
+    out = df[df["recommendation"].isin(rec_sel)]
+    out = out[(out["score"] >= score_lo) & (out["score"] <= score_hi)]
+    if "(any)" not in src_sel:
+        out = out[out["source"].astype(str).isin(src_sel)]
+    emp = out["employee_count"]
+    if inc_emp_unknown:
+        out = out[(emp.isna()) | ((emp >= emp_lo) & (emp <= emp_hi))]
+    else:
+        out = out[(emp.notna()) & (emp >= emp_lo) & (emp <= emp_hi)]
+    bud = out["budget_monthly"]
+    if inc_budget_unknown:
+        out = out[(bud.isna()) | ((bud >= b_lo) & (bud <= b_hi))]
+    else:
+        out = out[(bud.notna()) & (bud >= b_lo) & (bud <= b_hi)]
+    return out
+
+
+def render_filters_panel() -> None:
+    """Upload, filters and exports for the lead pipeline."""
+    # CSS marker: identifies this column so it can be styled / turned into a drawer.
+    st.markdown('<span id="lt-panel-mark"></span>', unsafe_allow_html=True)
     st.markdown(
         '<div class="side-brand"><span class="brand-mark">LT</span>Lead Triage</div>',
         unsafe_allow_html=True,
@@ -541,35 +726,18 @@ with st.sidebar:
     st.markdown('<div class="side-section">Filters</div>', unsafe_allow_html=True)
     base = st.session_state.get("scored")
     if base is not None:
-        rec_sel = st.multiselect("Recommendation", REC_ORDER, default=REC_ORDER)
-        score_lo, score_hi = st.slider("Score range", 0, 100, (0, 100))
+        rec_sel = st.multiselect("Recommendation", REC_ORDER, default=REC_ORDER, key="f_rec")
+        score_lo, score_hi = st.slider("Score range", 0, 100, (0, 100), key="f_score")
         srcs = sorted(str(s) for s in base["source"].dropna().unique() if str(s).strip())
-        src_sel = st.multiselect("Source", ["(any)"] + srcs, default=["(any)"])
-        emp_max = max(50, int(base["employee_count"].dropna().max() // 50 * 50 + 50))
-        emp_lo, emp_hi = st.slider("Company size (employees)", 0, emp_max, (0, emp_max), step=5)
-        inc_emp_unknown = st.checkbox("Include unknown company size", value=True)
-        bud_max = max(20000, int(base["budget_monthly"].dropna().max() // 1000 * 1000 + 1000))
-        b_lo, b_hi = st.slider("Monthly budget (USD)", 0, bud_max, (0, bud_max), step=1000)
-        inc_budget_unknown = st.checkbox("Include unknown budget", value=True)
+        src_sel = st.multiselect("Source", ["(any)"] + srcs, default=["(any)"], key="f_src")
+        emp_max, bud_max = filter_bounds(base)
+        emp_lo, emp_hi = st.slider("Company size (employees)", 0, emp_max, (0, emp_max), step=5, key="f_emp")
+        inc_emp_unknown = st.checkbox("Include unknown company size", value=True, key="f_inc_emp")
+        b_lo, b_hi = st.slider("Monthly budget (USD)", 0, bud_max, (0, bud_max), step=1000, key="f_budget")
+        inc_budget_unknown = st.checkbox("Include unknown budget", value=True, key="f_inc_bud")
 
-        def apply_filters(df: pd.DataFrame) -> pd.DataFrame:
-            out = df[df["recommendation"].isin(rec_sel)]
-            out = out[(out["score"] >= score_lo) & (out["score"] <= score_hi)]
-            if "(any)" not in src_sel:
-                out = out[out["source"].astype(str).isin(src_sel)]
-            emp = out["employee_count"]
-            if inc_emp_unknown:
-                out = out[(emp.isna()) | ((emp >= emp_lo) & (emp <= emp_hi))]
-            else:
-                out = out[(emp.notna()) & (emp >= emp_lo) & (emp <= emp_hi)]
-            bud = out["budget_monthly"]
-            if inc_budget_unknown:
-                out = out[(bud.isna()) | ((bud >= b_lo) & (bud <= b_hi))]
-            else:
-                out = out[(bud.notna()) & (bud >= b_lo) & (bud <= b_hi)]
-            return out
-
-        filtered = apply_filters(base)
+        filtered = apply_filters(base, rec_sel, score_lo, score_hi, src_sel,
+                                 emp_lo, emp_hi, inc_emp_unknown, b_lo, b_hi, inc_budget_unknown)
         st.session_state["filtered"] = filtered
     else:
         st.warning("No data loaded.")
@@ -606,99 +774,128 @@ with st.sidebar:
                 width="stretch",
             )
 
+
+def apply_stashed_filters() -> None:
+    """Re-apply the filter widgets' persisted values when the panel is hidden,
+    so collapsing the panel never changes the results."""
+    base = st.session_state.get("scored")
+    if base is None:
+        st.session_state["filtered"] = None
+        return
+    emp_max, bud_max = filter_bounds(base)
+    params = (
+        st.session_state.get("f_rec", REC_ORDER),
+        *st.session_state.get("f_score", (0, 100)),
+        st.session_state.get("f_src", ["(any)"]),
+        *st.session_state.get("f_emp", (0, emp_max)),
+        st.session_state.get("f_inc_emp", True),
+        *st.session_state.get("f_budget", (0, bud_max)),
+        st.session_state.get("f_inc_bud", True),
+    )
+    st.session_state["filtered"] = apply_filters(base, *params)
+
+
 # ---------------------------------------------------------------------------
 # Main panel
 # ---------------------------------------------------------------------------
-st.title("Lead Triage")
-st.caption("Automatically clean, score, qualify and prioritise inbound leads — with every score explained.")
+def render_main() -> None:
+    """Header (with the sidebar toggle), dataset banner, KPIs, ranked leads,
+    lead inspection, methodology and cleaning log."""
+    header = st.columns([0.07, 0.93], vertical_alignment="center")
+    with header[0]:
+        if st.button("☰", key="sb_toggle", type="primary", help="Show or hide the filters panel"):
+            set_sidebar(not sidebar_is_open())
+    with header[1]:
+        st.title("Lead Triage")
+        st.caption("Automatically clean, score, qualify and prioritise inbound leads — with every score explained.")
 
-scored = st.session_state.get("scored")
-filtered = st.session_state.get("filtered")
+    scored = st.session_state.get("scored")
+    filtered = st.session_state.get("filtered")
 
-if scored is None or scored.empty:
-    st.error("No valid leads to display. Upload a lead export to get started.")
-    st.stop()
+    if scored is None or scored.empty:
+        st.error("No valid leads to display. Upload a lead export to get started.")
+        st.stop()
 
-if filtered is None or filtered.empty:
-    st.warning("No leads match the current filters — adjust or clear them in the sidebar.")
-    st.stop()
+    if filtered is None or filtered.empty:
+        st.warning("No leads match the current filters — adjust or clear them in the sidebar.")
+        st.stop()
 
-report = st.session_state.get("report", {})
+    report = st.session_state.get("report", {})
 
-# -- dataset status ---------------------------------------------------------
-st.markdown(
-    dataset_banner(st.session_state.get("source_name", SAMPLE_NAME), report),
-    unsafe_allow_html=True,
-)
-
-# -- summary metrics --------------------------------------------------------
-st.subheader("Pipeline")
-kpis = [
-    kpi_card("Total Leads", f"{len(filtered):,}"),
-    kpi_card("Contact Now", f"{int((filtered['recommendation'] == CONTACT_NOW).sum()):,}", DOT_CLASS[CONTACT_NOW]),
-    kpi_card("Nurture", f"{int((filtered['recommendation'] == NURTURE).sum()):,}", DOT_CLASS[NURTURE]),
-    kpi_card("Disqualified", f"{int((filtered['recommendation'] == DISQUALIFY).sum()):,}", DOT_CLASS[DISQUALIFY]),
-    kpi_card("Average Score", f"{filtered['score'].mean():.0f}" if len(filtered) else "—"),
-]
-st.markdown(f'<div class="kpi-row">{"".join(kpis)}</div>', unsafe_allow_html=True)
-if len(filtered) < len(scored):
-    st.caption(f"Metrics reflect current filters ({len(scored):,} leads in the full dataset).")
-
-# -- results table ----------------------------------------------------------
-st.subheader("Ranked leads")
-display_cols = {
-    "rank": st.column_config.NumberColumn("Rank", format="%d"),
-    "lead_id": st.column_config.TextColumn("Lead ID"),
-    "company": st.column_config.TextColumn("Company"),
-    "title": st.column_config.TextColumn("Title"),
-    "budget_monthly": st.column_config.NumberColumn("Budget", format="$%d"),
-    "employee_count": st.column_config.NumberColumn("Staff", format="%.0f"),
-    "score": st.column_config.ProgressColumn("Score", min_value=0, max_value=100, format="%d"),
-    "recommendation": st.column_config.TextColumn("Recommendation"),
-    "key_reason": st.column_config.TextColumn("Key reason"),
-}
-table = filtered[
-    ["rank", "lead_id", "company", "title", "budget_monthly", "employee_count",
-     "score", "recommendation", "key_reason"]
-].copy()
-st.dataframe(
-    table,
-    column_config=display_cols,
-    hide_index=True,
-    width="stretch",
-    height=min(560, 40 + 35 * max(len(table), 1)),
-)
-
-# -- lead detail ------------------------------------------------------------
-st.subheader("Lead inspection")
-if len(filtered) == 0:
-    st.warning("No leads match the current filters.")
-    st.stop()
-
-options = filtered[["lead_id", "company", "name", "score", "recommendation", "rank"]].copy()
-options["label"] = (
-    "#" + options["rank"].astype(str) + " · "
-    + options["company"].fillna("?").astype(str)
-    + " — " + options["name"].fillna("?").astype(str)
-    + " (" + options["score"].astype(str) + " pts)"
-)
-labels = options["label"].tolist()
-selected_label = st.selectbox("Select a lead to see its full explanation", labels, index=0)
-# option order == filtered row order, so positional lookup is exact even when filters leave gaps in the index
-row = filtered.iloc[labels.index(selected_label)]
-
-st.divider()
-left_html, right_html = lead_detail_html(row)
-left, right = st.columns([1, 1.15], gap="large")
-with left:
-    st.markdown(left_html, unsafe_allow_html=True)
-with right:
-    st.markdown(right_html, unsafe_allow_html=True)
-
-# -- methodology ------------------------------------------------------------
-with st.expander("Methodology"):
+    # -- dataset status ---------------------------------------------------------
     st.markdown(
-        """
+        dataset_banner(st.session_state.get("source_name", SAMPLE_NAME), report),
+        unsafe_allow_html=True,
+    )
+
+    # -- summary metrics --------------------------------------------------------
+    st.subheader("Pipeline")
+    kpis = [
+        kpi_card("Total Leads", f"{len(filtered):,}"),
+        kpi_card("Contact Now", f"{int((filtered['recommendation'] == CONTACT_NOW).sum()):,}", DOT_CLASS[CONTACT_NOW]),
+        kpi_card("Nurture", f"{int((filtered['recommendation'] == NURTURE).sum()):,}", DOT_CLASS[NURTURE]),
+        kpi_card("Disqualified", f"{int((filtered['recommendation'] == DISQUALIFY).sum()):,}", DOT_CLASS[DISQUALIFY]),
+        kpi_card("Average Score", f"{filtered['score'].mean():.0f}" if len(filtered) else "—"),
+    ]
+    st.markdown(f'<div class="kpi-row">{"".join(kpis)}</div>', unsafe_allow_html=True)
+    if len(filtered) < len(scored):
+        st.caption(f"Metrics reflect current filters ({len(scored):,} leads in the full dataset).")
+
+    # -- results table ----------------------------------------------------------
+    st.subheader("Ranked leads")
+    display_cols = {
+        "rank": st.column_config.NumberColumn("Rank", format="%d"),
+        "lead_id": st.column_config.TextColumn("Lead ID"),
+        "company": st.column_config.TextColumn("Company"),
+        "title": st.column_config.TextColumn("Title"),
+        "budget_monthly": st.column_config.NumberColumn("Budget", format="$%d"),
+        "employee_count": st.column_config.NumberColumn("Staff", format="%.0f"),
+        "score": st.column_config.ProgressColumn("Score", min_value=0, max_value=100, format="%d"),
+        "recommendation": st.column_config.TextColumn("Recommendation"),
+        "key_reason": st.column_config.TextColumn("Key reason"),
+    }
+    table = filtered[
+        ["rank", "lead_id", "company", "title", "budget_monthly", "employee_count",
+         "score", "recommendation", "key_reason"]
+    ].copy()
+    st.dataframe(
+        table,
+        column_config=display_cols,
+        hide_index=True,
+        width="stretch",
+        height=min(560, 40 + 35 * max(len(table), 1)),
+    )
+
+    # -- lead detail ------------------------------------------------------------
+    st.subheader("Lead inspection")
+    if len(filtered) == 0:
+        st.warning("No leads match the current filters.")
+        st.stop()
+
+    options = filtered[["lead_id", "company", "name", "score", "recommendation", "rank"]].copy()
+    options["label"] = (
+        "#" + options["rank"].astype(str) + " · "
+        + options["company"].fillna("?").astype(str)
+        + " — " + options["name"].fillna("?").astype(str)
+        + " (" + options["score"].astype(str) + " pts)"
+    )
+    labels = options["label"].tolist()
+    selected_label = st.selectbox("Select a lead to see its full explanation", labels, index=0, key="lead_select")
+    # option order == filtered row order, so positional lookup is exact even when filters leave gaps in the index
+    row = filtered.iloc[labels.index(selected_label)]
+
+    st.divider()
+    left_html, right_html = lead_detail_html(row)
+    left, right = st.columns([1, 1.15], gap="large")
+    with left:
+        st.markdown(left_html, unsafe_allow_html=True)
+    with right:
+        st.markdown(right_html, unsafe_allow_html=True)
+
+    # -- methodology ------------------------------------------------------------
+    with st.expander("Methodology"):
+        st.markdown(
+            """
 **Deterministic, explainable model — max 100 pts.** All weights live in
 `src/scoring.py` → `SCORING_CONFIG` and can be tuned without touching any logic.
 
@@ -717,8 +914,28 @@ with st.expander("Methodology"):
 - **Nurture** — score 35–64, plus an early-stage floor (genuine business, no negative signals → kept warm)
 - **Disqualify** — score < 35, or **any** disqualifier (job seeker, student / learner, vendor / seller, spam, competitor, VC intro, press, newsletter error, explicit non-buyer) overrides the score.
 """
-    )
+        )
 
-# -- cleaning log -----------------------------------------------------------
-with st.expander("Cleaning log"):
-    st.markdown(cleaning_log_html(report), unsafe_allow_html=True)
+    # -- cleaning log -----------------------------------------------------------
+    with st.expander("Cleaning log"):
+        st.markdown(cleaning_log_html(report), unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------------------------
+# Layout: the filters panel is a column on the left; the rest is main content.
+# ---------------------------------------------------------------------------
+# First mobile load: start with the panel closed so the drawer never auto-opens
+# on phones (a hidden iframe sets ?sb=closed once and reloads — see above).
+if "sb" not in st.query_params:
+    st.markdown(MOBILE_INIT_IFRAME, unsafe_allow_html=True)
+
+if sidebar_is_open():
+    st.markdown(f"<style>{MOBILE_DRAWER_CSS}</style>", unsafe_allow_html=True)
+    left, right = st.columns([0.26, 0.74], gap="large")
+    with left:
+        render_filters_panel()
+    with right:
+        render_main()
+else:
+    apply_stashed_filters()
+    render_main()
