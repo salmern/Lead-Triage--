@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Generated output (keep sample data, ignore results)
+data/output/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+.streamlit.log
