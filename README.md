@@ -1,4 +1,4 @@
-# AI Lead Triage
+# Lead Triage
 
 Automatically **clean, score, qualify and prioritise inbound leads** for a
 marketing agency. Upload any lead export (`.xlsx` / `.csv`), and the app
